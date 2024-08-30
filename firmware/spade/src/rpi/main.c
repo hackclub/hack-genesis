@@ -221,7 +221,7 @@ static int load_new_scripts(void) {
             printf("SPADE:%sEND", SPADE_VERSION);
             return 0;
         case 2: // legacy (1,2,3,4)
-            puts("legacy detected");
+            puts("LEG_UPL_DET"); // don't confuse people with system messages that seem like they're meant for humans
             return 0;
         default:
             return 0;
@@ -265,7 +265,9 @@ int main() {
   jerry_init(JERRY_INIT_MEM_STATS);
   init(sprite_free_jerry_object); // TODO: document
 
-  while(!save_read()) {
+  const char* game_stored = save_read();
+
+  while (!game_stored) {
     // No game stored in memory
     strcpy(errorbuf, "                    \n"
                      "                    \n"
@@ -287,8 +289,15 @@ int main() {
     render(st7735_fill_send);
     st7735_fill_finish();
 
-    load_new_scripts();
+    if (load_new_scripts()) {
+        game_stored = save_read();
+    }
   }
+
+  // Hacky, but we're resetting here since button polling
+  // is launched in upl_stdin_read. Will be fixed with new
+  // multi-game support code.
+  multicore_reset_core1();
 
   // Start a core to listen for keypresses.
   multicore_launch_core1(core1_entry);
